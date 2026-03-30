@@ -1,19 +1,40 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../../config/db');
 const { initDb } = require('../../config/initDb');
 
-// Guard: require ADMIN_SECRET header
-router.use((req, res, next) => {
+// ── Admin secret middleware ───────────────────────────────────────────────────
+function adminGuard(req, res, next) {
   const secret = process.env.ADMIN_SECRET;
-  if (!secret) return res.status(503).json({ error: 'Admin endpoint disabled' });
-  if (req.headers['x-admin-secret'] !== secret) {
+  const provided = req.headers['x-admin-secret'] || '';
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+  // Endpoint disabled if ADMIN_SECRET not set
+  if (!secret) {
+    console.warn(`[admin] ⛔ Endpoint disabled — ADMIN_SECRET not set (ip=${ip})`);
+    return res.status(503).json({ error: 'Admin endpoint disabled' });
+  }
+
+  // Timing-safe comparison to prevent timing attacks
+  const secretBuf   = Buffer.from(secret);
+  const providedBuf = Buffer.from(provided.padEnd(secret.length));
+  const valid =
+    providedBuf.length === secretBuf.length &&
+    crypto.timingSafeEqual(secretBuf, providedBuf);
+
+  if (!valid) {
+    console.warn(`[admin] ❌ Unauthorized attempt — ip=${ip} method=${req.method} path=${req.path}`);
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  console.log(`[admin] ✅ Authorized — ip=${ip} method=${req.method} path=${req.path}`);
   next();
-});
+}
+
+router.use(adminGuard);
 
 // POST /api/admin/seed
 router.post('/seed', async (req, res) => {
