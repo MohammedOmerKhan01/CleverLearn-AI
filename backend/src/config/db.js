@@ -1,16 +1,4 @@
-const fs = require('fs');
-const path = require('path');
 const mysql = require('mysql2/promise');
-
-function getSslConfig() {
-  if (process.env.DB_SSL !== 'true') return undefined;
-  const caPath = path.join(__dirname, 'ca.crt');
-  if (fs.existsSync(caPath)) {
-    return { ca: fs.readFileSync(caPath) };
-  }
-  // Fallback: skip verification (less secure but works without cert file)
-  return { rejectUnauthorized: false };
-}
 
 const pool = mysql.createPool({
   host:     process.env.DB_HOST,
@@ -21,7 +9,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ssl: getSslConfig(),
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
 });
 
 async function testConnection() {
