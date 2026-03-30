@@ -15,6 +15,7 @@ const subjectsRoutes = require('./modules/subjects/subjects.routes');
 const videosRoutes = require('./modules/videos/videos.routes');
 const progressRoutes = require('./modules/progress/progress.routes');
 const aiRoutes = require('./modules/ai/ai.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
 
 // Subject-scoped video routes
 const videosController = require('./modules/videos/videos.controller');
@@ -51,6 +52,7 @@ app.use('/api/subjects/:subjectId/first-video', authenticate, videosController.g
 app.use('/api/videos', videosRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
